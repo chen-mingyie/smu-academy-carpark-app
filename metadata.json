@@ -1,0 +1,6 @@
+{
+  "name": "SG ParkWatch - Real-Time Carpark Tracker",
+  "description": "Live real-time Singapore carpark lot availability tracker with interactive map, HDB/URA/Mall rates, lot forecasts, and rate calculator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
