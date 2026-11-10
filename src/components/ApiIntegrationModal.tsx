@@ -192,6 +192,44 @@ app.get('/api/lta/carparks', async (req, res) => {
               </button>
             </div>
 
+            {/* Quick Preset Buttons */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-[11px] text-slate-400">Project Endpoints:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEndpointUrl('/api/carparkavailability');
+                }}
+                className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-mono cursor-pointer"
+              >
+                /api/carparkavailability
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setTesting(true);
+                  try {
+                    const res = await fetch('/api/health');
+                    const healthData = await res.json();
+                    setTestResult({
+                      success: true,
+                      message: `Health check: ${healthData.status} (Uptime: ${healthData.uptimeSeconds}s). LTA AccountKey configured: ${healthData.ltaDataMall?.accountKeyConfigured ? 'Yes' : 'No (Pending user key)'}.`,
+                    });
+                  } catch (e: any) {
+                    setTestResult({
+                      success: false,
+                      message: `Health check failed: ${e.message}`,
+                    });
+                  } finally {
+                    setTesting(false);
+                  }
+                }}
+                className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-mono cursor-pointer"
+              >
+                Test /api/health
+              </button>
+            </div>
+
             {testResult && (
               <div
                 className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${

@@ -23,6 +23,21 @@ export interface DataGovSgApiResponse {
   }>;
 }
 
+export interface LtaDataMallItem {
+  CarParkID: string;
+  Area?: string;
+  Development?: string;
+  Location?: string; // "1.2935 103.8572"
+  AvailableLots: number | string;
+  LotType: string; // "C", "M", "H"
+  Agency?: string; // "HDB", "LTA", "URA"
+}
+
+export interface LtaDataMallApiResponse {
+  'odata.metadata'?: string;
+  value: LtaDataMallItem[];
+}
+
 export class CarparkService {
   private static carparks: Carpark[] = [...INITIAL_CARPARKS];
 
@@ -66,7 +81,7 @@ export class CarparkService {
   }
 
   public static getCustomEndpoint(): string {
-    return localStorage.getItem(STORAGE_KEY_CUSTOM_ENDPOINT) || '';
+    return localStorage.getItem(STORAGE_KEY_CUSTOM_ENDPOINT) || '/api/carparkavailability';
   }
 
   public static setCustomEndpoint(endpoint: string): void {
@@ -149,6 +164,49 @@ export class CarparkService {
       }
 
       const data = await response.json();
+
+      // Check for missing account key error from serverless route
+      if (data && data.error === 'ACCOUNT_KEY_MISSING') {
+        return {
+          success: false,
+          message: 'Serverless route /api/carparkavailability is active, but LTA_DATAMALL_ACCOUNT_KEY is not set yet in environment.',
+        };
+      }
+
+      // If response conforms to LTA DataMall v2 format { value: [...] }
+      if (data && data.value && Array.isArray(data.value)) {
+        const ltaItems = data.value as LtaDataMallItem[];
+        let matchedCount = 0;
+
+        this.carparks = this.carparks.map((cp) => {
+          const matched = ltaItems.find(
+            (item) =>
+              item.CarParkID === cp.carparkNumber ||
+              item.CarParkID === cp.id ||
+              (item.Development && cp.name.toLowerCase().includes(item.Development.toLowerCase()))
+          );
+
+          if (matched) {
+            matchedCount++;
+            const available = typeof matched.AvailableLots === 'number'
+              ? matched.AvailableLots
+              : parseInt(matched.AvailableLots, 10) || cp.availableLots;
+
+            return {
+              ...cp,
+              availableLots: Math.min(cp.totalLots, available),
+              lastUpdated: new Date().toISOString(),
+            };
+          }
+          return cp;
+        });
+
+        return {
+          success: true,
+          message: `Successfully synced ${matchedCount} carparks from LTA DataMall CarParkAvailabilityv2 (${ltaItems.length} total lots reported by LTA).`,
+          count: matchedCount,
+        };
+      }
 
       // If response conforms to data.gov.sg format
       if (data && data.items && data.items[0]?.carpark_data) {
